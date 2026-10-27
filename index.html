@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Gestión Clínica Médica</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdfa',
+              100: '#ccfbf1',
+              500: '#14b8a6',
+              600: '#0d9488',
+              700: '#0f766e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col md:flex-row">
+
+  <!-- BARRA LATERAL (SIDEBAR) -->
+  <aside class="w-full md:w-64 bg-slate-900 text-slate-100 flex flex-col shrink-0 shadow-xl">
+    <div class="p-6 border-b border-slate-800 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-teal-500 flex items-center justify-center text-white text-xl shadow-lg shadow-teal-500/30">
+        <i class="fa-solid fa-hospital"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-lg leading-tight">Clínica Médica</h1>
+        <p class="text-xs text-slate-400">Sistema Administrativo</p>
+      </div>
+    </div>
+
+    <!-- NAVEGACIÓN -->
+    <nav class="flex-1 p-4 space-y-1.5 text-sm">
+      <button onclick="cambiarModulo('citas')" id="btn-nav-citas" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all bg-teal-600 text-white shadow-md shadow-teal-600/30">
+        <i class="fa-regular fa-calendar-check w-5 text-center"></i> Citas y Consultorios
+      </button>
+      <button onclick="cambiarModulo('pacientes')" id="btn-nav-pacientes" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
+        <i class="fa-solid fa-user-group w-5 text-center"></i> Pacientes
+      </button>
+      <button onclick="cambiarModulo('medicos')" id="btn-nav-medicos" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
+        <i class="fa-solid fa-user-doctor w-5 text-center"></i> Médicos
+      </button>
+      <button onclick="cambiarModulo('especialidades')" id="btn-nav-especialidades" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
+        <i class="fa-solid fa-stethoscope w-5 text-center"></i> Especialidades
+      </button>
+    </nav>
+
+    <!-- RESUMEN / METRICAS -->
+    <div class="p-4 m-4 bg-slate-800/80 rounded-2xl border border-slate-700/60 text-xs space-y-2">
+      <div class="flex justify-between items-center text-slate-300">
+        <span>Consultas Realizadas:</span>
+        <span id="metric-realizadas" class="font-bold text-teal-400 text-sm">0</span>
+      </div>
+      <div class="flex justify-between items-center text-slate-300">
+        <span>Citas Programadas:</span>
+        <span id="metric-programadas" class="font-bold text-blue-400 text-sm">0</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full overflow-y-auto">
+
+    <!-- MENSAJES TOAST / ALERTAS -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm"></div>
+
+    <!-- ==================================================== -->
+    <!-- MÓDULO 4: CITAS Y CONSULTORIOS -->
+    <!-- ==================================================== -->
+    <section id="modulo-citas" class="space-y-6">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-5">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-800">Citas Médicas y Consultorios</h2>
+          <p class="text-sm text-slate-500">Programación con validación estricta de solapamiento y médico activo.</p>
+        </div>
+        <button onclick="abrirModalCita()" class="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-medium text-sm flex items-center gap-2 shadow-lg shadow-teal-600/20 transition-all">
+          <i class="fa-solid fa-plus"></i> Programar Nueva Cita
+        </button>
+      </div>
+
+      <!-- TABLA DE CITAS -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-600">
+            <thead class="bg-slate-100 text-slate-700 text-xs uppercase font-semibold">
+              <tr>
+                <th class="p-4">ID</th>
+                <th class="p-4">Fecha y Hora</th>
+                <th class="p-4">Paciente</th>
+                <th class="p-4">Médico / Especialidad</th>
+                <th class="p-4">Consultorio</th>
+                <th class="p-4">Estado</th>
+                <th class="p-4 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-citas-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================== -->
+    <!-- MÓDULO 1: PACIENTES -->
+    <!-- ==================================================== -->
+    <section id="modulo-pacientes" class="space-y-6 hidden">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-5">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-800">Administración de Pacientes</h2>
+          <p class="text-sm text-slate-500">Gestión de expediente, historial clínico y control de estado.</p>
+        </div>
+        <button onclick="abrirModalPaciente()" class="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-medium text-sm flex items-center gap-2 shadow-lg shadow-teal-600/20 transition-all">
+          <i class="fa-solid fa-user-plus"></i> Registrar Paciente
+        </button>
+      </div>
+
+      <!-- TABLA PACIENTES -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-600">
+            <thead class="bg-slate-100 text-slate-700 text-xs uppercase font-semibold">
+              <tr>
+                <th class="p-4">ID</th>
+                <th class="p-4">Nombre Completo</th>
+                <th class="p-4">Teléfono</th>
+                <th class="p-4">Estado</th>
+                <th class="p-4 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-pacientes-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================== -->
+    <!-- MÓDULO 3: MÉDICOS -->
+    <!-- ==================================================== -->
+    <section id="modulo-medicos" class="space-y-6 hidden">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-5">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-800">Personal Médico</h2>
+          <p class="text-sm text-slate-500">Especialistas registrados y disponibilidad clínica.</p>
+        </div>
+        <button onclick="abrirModalMedico()" class="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-medium text-sm flex items-center gap-2 shadow-lg shadow-teal-600/20 transition-all">
+          <i class="fa-solid fa-user-doctor"></i> Registrar Médico
+        </button>
+      </div>
+
+      <!-- TABLA MEDICOS -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-600">
+            <thead class="bg-slate-100 text-slate-700 text-xs uppercase font-semibold">
+              <tr>
+                <th class="p-4">ID</th>
+                <th class="p-4">Médico</th>
+                <th class="p-4">Especialidad</th>
+                <th class="p-4">Estado</th>
+                <th class="p-4 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-medicos-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================== -->
+    <!-- MÓDULO 2: ESPECIALIDADES -->
+    <!-- ==================================================== -->
+    <section id="modulo-especialidades" class="space-y-6 hidden">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-5">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-800">Especialidades Médicas</h2>
+          <p class="text-sm text-slate-500">Catálogo de ramas de atención clínica.</p>
+        </div>
+        <button onclick="abrirModalEspecialidad()" class="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-medium text-sm flex items-center gap-2 shadow-lg shadow-teal-600/20 transition-all">
+          <i class="fa-solid fa-plus"></i> Nueva Especialidad
+        </button>
+      </div>
+
+      <!-- TABLA ESPECIALIDADES -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden max-w-2xl">
+        <table class="w-full text-left text-sm text-slate-600">
+          <thead class="bg-slate-100 text-slate-700 text-xs uppercase font-semibold">
+            <tr>
+              <th class="p-4">ID</th>
+              <th class="p-4">Nombre de Especialidad</th>
+              <th class="p-4 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-especialidades-body" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================================================== -->
+  <!-- MODAL: CITAS -->
+  <!-- ==================================================== -->
+  <div id="modal-cita" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 id="modal-cita-titulo" class="font-bold text-lg text-slate-800">Programar Cita Médica</h3>
+        <button onclick="cerrarModales()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <form id="form-cita" onsubmit="guardarCita(event)" class="space-y-4">
+        <input type="hidden" id="cita-id">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Paciente</label>
+          <select id="cita-paciente" required class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Médico (Solo Activos)</label>
+          <select id="cita-medico" required class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Consultorio</label>
+          <input type="text" id="cita-consultorio" placeholder="Ej. Consultorio 101" required class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha y Hora</label>
+          <input type="datetime-local" id="cita-fecha" required class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none">
+          <p class="text-[11px] text-slate-400 mt-1">No se permiten fechas anteriores al día y hora actual.</p>
+        </div>
+        <div class="flex justify-end gap-2 pt-3 border-t">
+          <button type="button" onclick="cerrarModales()" class="px-4 py-2 border rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100">Cancelar</button>
+          <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-medium shadow-md">Guardar Cita</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================================================== -->
+  <!-- MODAL: PACIENTES -->
+  <!-- ==================================================== -->
+  <div id="modal-paciente" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 id="modal-paciente-titulo" class="font-bold text-lg text-slate-800">Registrar Paciente</h3>
+        <button onclick="cerrarModales()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <form id="form-paciente" onsubmit="guardarPaciente(event)" class="space-y-4">
+        <input type="hidden" id="paciente-id">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Nombre Completo</label>
+          <input type="text" id="paciente-nombre" required class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Teléfono</label>
+          <input type="tel" id="paciente-telefono" required class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none">
+        </div>
+        <div class="flex justify-end gap-2 pt-3 border-t">
+          <button type="button" onclick="cerrarModales()" class="px-4 py-2 border rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100">Cancelar</button>
+          <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-medium shadow-md">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================================================== -->
+  <!-- MODAL: HISTORIAL DEL PACIENTE -->
+  <!-- ==================================================== -->
+  <div id="modal-historial" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <div>
+          <h3 class="font-bold text-lg text-slate-800">Historial de Citas del Paciente</h3>
+          <p id="historial-paciente-subtitulo" class="text-xs text-slate-500"></p>
+        </div>
+        <button onclick="cerrarModales()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="max-h-80 overflow-y-auto">
+        <table class="w-full text-left text-sm text-slate-600">
+          <thead class="bg-slate-100 text-slate-700 text-xs uppercase font-semibold">
+            <tr>
+              <th class="p-3">Fecha y Hora</th>
+              <th class="p-3">Médico</th>
+              <th class="p-3">Consultorio</th>
+              <th class="p-3">Estado</th>
+            </tr>
+          </thead>
+          <tbody id="historial-citas-body" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+      <div class="flex justify-end pt-3 border-t">
+        <button type="button" onclick="cerrarModales()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-medium">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================== -->
+  <!-- MODAL: MÉDICOS -->
+  <!-- ==================================================== -->
+  <div id="modal-medico" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 id="modal-medico-titulo" class="font-bold text-lg text-slate-800">Registrar Médico</h3>
+        <button onclick="cerrarModales()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <form id="form-medico" onsubmit="guardarMedico(event)" class="space-y-4">
+        <input type="hidden" id="medico-id">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Nombre Completo</label>
+          <input type="text" id="medico-nombre" required class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Especialidad</label>
+          <select id="medico-especialidad" required class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none"></select>
+        </div>
+        <div class="flex justify-end gap-2 pt-3 border-t">
+          <button type="button" onclick="cerrarModales()" class="px-4 py-2 border rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100">Cancelar</button>
+          <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-medium shadow-md">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================================================== -->
+  <!-- MODAL: ESPECIALIDADES -->
+  <!-- ==================================================== -->
+  <div id="modal-especialidad" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 id="modal-especialidad-titulo" class="font-bold text-lg text-slate-800">Nueva Especialidad</h3>
+        <button onclick="cerrarModales()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <form id="form-especialidad" onsubmit="guardarEspecialidad(event)" class="space-y-4">
+        <input type="hidden" id="especialidad-id">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Nombre de Especialidad</label>
+          <input type="text" id="especialidad-nombre" required class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-teal-500 outline-none">
+        </div>
+        <div class="flex justify-end gap-2 pt-3 border-t">
+          <button type="button" onclick="cerrarModales()" class="px-4 py-2 border rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100">Cancelar</button>
+          <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-medium shadow-md">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- LÓGICA JAVASCRIPT CON TODAS LAS REGLAS DE NEGOCIO -->
+  <script>
+    // Inicialización de colecciones en memoria / LocalStorage
+    let especialidades = JSON.parse(localStorage.getItem('clinica_especialidades')) || [
+      { id: 1, nombre: "Cardiología" },
+      { id: 2, nombre: "Pediatría" },
+      { id: 3, nombre: "Medicina General" }
+    ];
+
+    let medicos = JSON.parse(localStorage.getItem('clinica_medicos')) || [
+      { id: 1, nombre: "Carlos Mendoza", especialidadId: 1, activo: true },
+      { id: 2, nombre: "Ana Torres", especialidadId: 2, activo: true }
+    ];
+
+    let pacientes = JSON.parse(localStorage.getItem('clinica_pacientes')) || [
+      { id: 1, nombre: "Juan Pérez", telefono: "8711234567", activo: true },
+      { id: 2, nombre: "María García", telefono: "8719876543", activo: true }
+    ];
+
+    let citas = JSON.parse(localStorage.getItem('clinica_citas')) || [];
+
+    function guardarDatos() {
+      localStorage.setItem('clinica_especialidades', JSON.stringify(especialidades));
+      localStorage.setItem('clinica_medicos', JSON.stringify(medicos));
+      localStorage.setItem('clinica_pacientes', JSON.stringify(pacientes));
+      localStorage.setItem('clinica_citas', JSON.stringify(citas));
+      actualizarMetricas();
+    }
+
+    // Notificaciones Toast
+    function notificar(mensaje, tipo = "info") {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const bg = tipo === 'error' ? 'bg-rose-500' : (tipo === 'success' ? 'bg-teal-600' : 'bg-slate-800');
+      toast.className = `${bg} text-white text-sm px-4 py-3 rounded-xl shadow-xl flex items-center justify-between gap-3 transition-all`;
+      toast.innerHTML = `<span>${mensaje}</span><button onclick="this.parentElement.remove()"><i class="fa-solid fa-xmark"></i></button>`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
+    }
+
+    // Métricas del sidebar
+    function actualizarMetricas() {
+      const realizadas = citas.filter(c => c.estado === 'REALIZADA').length;
+      const programadas = citas.filter(c => c.estado === 'PROGRAMADA').length;
+      document.getElementById('metric-realizadas').innerText = realizadas;
+      document.getElementById('metric-programadas').innerText = programadas;
+    }
+
+    // Navegación de módulos
+    function cambiarModulo(modulo) {
+      ['citas', 'pacientes', 'medicos', 'especialidades'].forEach(m => {
+        document.getElementById(`modulo-${m}`).classList.add('hidden');
+        const btn = document.getElementById(`btn-nav-${m}`);
+        btn.className = "nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all";
+      });
+
+      document.getElementById(`modulo-${modulo}`).classList.remove('hidden');
+      const activo = document.getElementById(`btn-nav-${modulo}`);
+      activo.className = "nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all bg-teal-600 text-white shadow-md shadow-teal-600/30";
+
+      if (modulo === 'citas') renderCitas();
+      if (modulo === 'pacientes') renderPacientes();
+      if (modulo === 'medicos') renderMedicos();
+      if (modulo === 'especialidades') renderEspecialidades();
+    }
+
+    function cerrarModales() {
+      document.querySelectorAll('[id^="modal-"]').forEach(m => m.classList.add('hidden'));
+    }
+
+    // ==========================================
+    // REGLAS Y RENDER DE CITAS
+    // ==========================================
+    function renderCitas() {
+      const tbody = document.getElementById('tabla-citas-body');
+      tbody.innerHTML = '';
+
+      if (citas.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">No hay citas registradas.</td></tr>`;
+        return;
+      }
+
+      citas.forEach(c => {
+        const pac = pacientes.find(p => p.id === c.pacienteId) || { nombre: "Desconocido" };
+        const med = medicos.find(m => m.id === c.medicoId) || { nombre: "Desconocido", especialidadId: null };
+        const esp = especialidades.find(e => e.id === med.especialidadId) || { nombre: "N/A" };
+
+        let badge = "bg-blue-100 text-blue-700";
+        if (c.estado === "REALIZADA") badge = "bg-emerald-100 text-emerald-700";
+        if (c.estado === "CANCELADA") badge = "bg-rose-100 text-rose-700";
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition-colors";
+        tr.innerHTML = `
+          <td class="p-4 font-mono text-xs">#${c.id}</td>
+          <td class="p-4 font-semibold text-slate-800">${c.fechaHora.replace('T', ' ')}</td>
+          <td class="p-4">${pac.nombre}</td>
+          <td class="p-4">${med.nombre} <span class="text-xs text-slate-400 block">${esp.nombre}</span></td>
+          <td class="p-4"><span class="px-2.5 py-1 bg-slate-100 rounded-lg text-xs font-medium">${c.consultorio}</span></td>
+          <td class="p-4"><span class="px-2.5 py-1 rounded-lg text-xs font-semibold ${badge}">${c.estado}</span></td>
+          <td class="p-4 text-center space-x-1">
+            ${c.estado === 'PROGRAMADA' ? `
+              <button onclick="completarCita(${c.id})" title="Marcar Realizada" class="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg"><i class="fa-solid fa-check"></i></button>
+              <button onclick="editarCita(${c.id})" title="Editar Fecha/Consultorio" class="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"><i class="fa-solid fa-pen"></i></button>
+              <button onclick="cancelarCita(${c.id})" title="Cancelar Cita" class="p-2 text-rose-600 hover:bg-rose-50 rounded-lg"><i class="fa-solid fa-trash"></i></button>
+            ` : `<span class="text-xs text-slate-400">Finalizada</span>`}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function abrirModalCita() {
+      document.getElementById('form-cita').reset();
+      document.getElementById('cita-id').value = '';
+      document.getElementById('modal-cita-titulo').innerText = "Programar Cita Médica";
+
+      // Llenar pacientes activos
+      const selPac = document.getElementById('cita-paciente');
+      selPac.innerHTML = '';
+      pacientes.filter(p => p.activo).forEach(p => {
+        selPac.innerHTML += `<option value="${p.id}">${p.nombre}</option>`;
+      });
+
+      // Llenar médicos activos
+      const selMed = document.getElementById('cita-medico');
+      selMed.innerHTML = '';
+      medicos.filter(m => m.activo).forEach(m => {
+        const esp = especialidades.find(e => e.id === m.especialidadId);
+        selMed.innerHTML += `<option value="${m.id}">${m.nombre} (${esp ? esp.nombre : 'Sin esp'})</option>`;
+      });
+
+      document.getElementById('modal-cita').classList.remove('hidden');
+    }
+
+    function editarCita(id) {
+      const cita = citas.find(c => c.id === id);
+      if (!cita) return;
+      abrirModalCita();
+      document.getElementById('modal-cita-titulo').innerText = "Modificar Cita Médica";
+      document.getElementById('cita-id').value = cita.id;
+      document.getElementById('cita-paciente').value = cita.pacienteId;
+      document.getElementById('cita-medico').value = cita.medicoId;
+      document.getElementById('cita-consultorio').value = cita.consultorio;
+      document.getElementById('cita-fecha').value = cita.fechaHora;
+    }
+
+    function guardarCita(e) {
+      e.preventDefault();
+      const id = document.getElementById('cita-id').value;
+      const pacienteId = parseInt(document.getElementById('cita-paciente').value);
+      const medicoId = parseInt(document.getElementById('cita-medico').value);
+      const consultorio = document.getElementById('cita-consultorio').value.trim().toUpperCase();
+      const fechaHora = document.getElementById('cita-fecha').value;
+
+      // VALIDACIÓN 1: Fecha no anterior a la actual
+      const fechaSeleccionada = new Date(fechaHora);
+      const ahora = new Date();
+      if (fechaSeleccionada < ahora) {
+        notificar("No se puede registrar una cita con fecha/hora anterior a la actual.", "error");
+        return;
+      }
+
+      // VALIDACIÓN 2: Médico activo
+      const med = medicos.find(m => m.id === medicoId);
+      if (!med || !med.activo) {
+        notificar("No se puede programar citas con médicos inactivos.", "error");
+        return;
+      }
+
+      // VALIDACIÓN 3: Conflicto de horario (médico o consultorio)
+      const empalme = citas.some(c => {
+        if (id && c.id === parseInt(id)) return false;
+        if (c.estado !== 'PROGRAMADA') return false;
+        if (c.fechaHora === fechaHora) {
+          if (c.medicoId === medicoId) {
+            notificar(`El médico ya tiene una cita programada a esa misma hora.`, "error");
+            return true;
+          }
+          if (c.consultorio.toUpperCase() === consultorio) {
+            notificar(`El consultorio "${consultorio}" ya se encuentra asignado en ese horario.`, "error");
+            return true;
+          }
+        }
+        return false;
+      });
+
+      if (empalme) return;
+
+      if (id) {
+        const c = citas.find(x => x.id === parseInt(id));
+        c.pacienteId = pacienteId;
+        c.medicoId = medicoId;
+        c.consultorio = consultorio;
+        c.fechaHora = fechaHora;
+        notificar("Cita actualizada exitosamente.", "success");
+      } else {
+        const nuevaCita = {
+          id: citas.length ? Math.max(...citas.map(x => x.id)) + 1 : 1,
+          pacienteId,
+          medicoId,
+          consultorio,
+          fechaHora,
+          estado: 'PROGRAMADA'
+        };
+        citas.push(nuevaCita);
+        notificar("Cita programada correctamente.", "success");
+      }
+
+      guardarDatos();
+      cerrarModales();
+      renderCitas();
+    }
+
+    function completarCita(id) {
+      const c = citas.find(x => x.id === id);
+      if (c) {
+        c.estado = 'REALIZADA';
+        guardarDatos();
+        renderCitas();
+        notificar("Consulta marcada como realizada.", "success");
+      }
+    }
+
+    function cancelarCita(id) {
+      if (!confirm("¿Desea cancelar esta cita médica?")) return;
+      const c = citas.find(x => x.id === id);
+      if (c) {
+        c.estado = 'CANCELADA';
+        guardarDatos();
+        renderCitas();
+        notificar("Cita cancelada correctamente.", "info");
+      }
+    }
+
+    // ==========================================
+    // REGLAS Y RENDER DE PACIENTES
+    // ==========================================
+    function renderPacientes() {
+      const tbody = document.getElementById('tabla-pacientes-body');
+      tbody.innerHTML = '';
+      pacientes.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition-colors";
+        tr.innerHTML = `
+          <td class="p-4 font-mono text-xs">#${p.id}</td>
+          <td class="p-4 font-semibold text-slate-800">${p.nombre}</td>
+          <td class="p-4">${p.telefono}</td>
+          <td class="p-4">
+            <span class="px-2.5 py-1 rounded-lg text-xs font-semibold ${p.activo ? 'bg-teal-100 text-teal-700' : 'bg-slate-200 text-slate-600'}">
+              ${p.activo ? 'Activo' : 'Inactivo'}
+            </span>
+          </td>
+          <td class="p-4 text-center space-x-1">
+            <button onclick="verHistorialPaciente(${p.id})" title="Ver Historial" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><i class="fa-solid fa-clock-rotate-left"></i></button>
+            <button onclick="editarPaciente(${p.id})" title="Editar" class="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="toggleEstadoPaciente(${p.id})" title="${p.activo ? 'Desactivar' : 'Activar'}" class="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+              <i class="fa-solid ${p.activo ? 'fa-user-slash text-rose-500' : 'fa-user-check text-teal-500'}"></i>
+            </button>
+            <button onclick="eliminarPaciente(${p.id})" title="Eliminar" class="p-2 text-rose-600 hover:bg-rose-50 rounded-lg"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function abrirModalPaciente() {
+      document.getElementById('form-paciente').reset();
+      document.getElementById('paciente-id').value = '';
+      document.getElementById('modal-paciente-titulo').innerText = "Registrar Paciente";
+      document.getElementById('modal-paciente').classList.remove('hidden');
+    }
+
+    function editarPaciente(id) {
+      const p = pacientes.find(x => x.id === id);
+      if (!p) return;
+      abrirModalPaciente();
+      document.getElementById('modal-paciente-titulo').innerText = "Actualizar Paciente";
+      document.getElementById('paciente-id').value = p.id;
+      document.getElementById('paciente-nombre').value = p.nombre;
+      document.getElementById('paciente-telefono').value = p.telefono;
+    }
+
+    function guardarPaciente(e) {
+      e.preventDefault();
+      const id = document.getElementById('paciente-id').value;
+      const nombre = document.getElementById('paciente-nombre').value.trim();
+      const telefono = document.getElementById('paciente-telefono').value.trim();
+
+      if (id) {
+        const p = pacientes.find(x => x.id === parseInt(id));
+        p.nombre = nombre;
+        p.telefono = telefono;
+        notificar("Paciente actualizado correctamente.", "success");
+      } else {
+        pacientes.push({
+          id: pacientes.length ? Math.max(...pacientes.map(x => x.id)) + 1 : 1,
+          nombre,
+          telefono,
+          activo: true
+        });
+        notificar("Paciente agregado con éxito.", "success");
+      }
+      guardarDatos();
+      cerrarModales();
+      renderPacientes();
+    }
+
+    function toggleEstadoPaciente(id) {
+      const p = pacientes.find(x => x.id === id);
+      if (p) {
+        p.activo = !p.activo;
+        guardarDatos();
+        renderPacientes();
+        notificar(`Paciente ${p.activo ? 'activado' : 'desactivado'}.`, "info");
+      }
+    }
+
+    function eliminarPaciente(id) {
+      // VALIDACIÓN: No se puede eliminar si tiene cita activa (PROGRAMADA)
+      const tieneCitaActiva = citas.some(c => c.pacienteId === id && c.estado === 'PROGRAMADA');
+      if (tieneCitaActiva) {
+        notificar("No se puede eliminar un paciente que tenga una cita activa (programada).", "error");
+        return;
+      }
+      if (!confirm("¿Está seguro de eliminar a este paciente?")) return;
+      pacientes = pacientes.filter(p => p.id !== id);
+      guardarDatos();
+      renderPacientes();
+      notificar("Paciente eliminado correctamente.", "success");
+    }
+
+    function verHistorialPaciente(id) {
+      const p = pacientes.find(x => x.id === id);
+      if (!p) return;
+      document.getElementById('historial-paciente-subtitulo').innerText = `Expediente de ${p.nombre} (Tel: ${p.telefono})`;
+      const tbody = document.getElementById('historial-citas-body');
+      tbody.innerHTML = '';
+      const historial = citas.filter(c => c.pacienteId === id);
+
+      if (historial.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">El paciente no registra citas.</td></tr>`;
+      } else {
+        historial.forEach(c => {
+          const m = medicos.find(med => med.id === c.medicoId) || { nombre: "N/A" };
+          tbody.innerHTML += `
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 font-medium">${c.fechaHora.replace('T', ' ')}</td>
+              <td class="p-3">${m.nombre}</td>
+              <td class="p-3">${c.consultorio}</td>
+              <td class="p-3"><span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100">${c.estado}</span></td>
+            </tr>
+          `;
+        });
+      }
+      document.getElementById('modal-historial').classList.remove('hidden');
+    }
+
+    // ==========================================
+    // REGLAS Y RENDER DE MÉDICOS
+    // ==========================================
+    function renderMedicos() {
+      const tbody = document.getElementById('tabla-medicos-body');
+      tbody.innerHTML = '';
+      medicos.forEach(m => {
+        const esp = especialidades.find(e => e.id === m.especialidadId) || { nombre: "Sin Asignar" };
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition-colors";
+        tr.innerHTML = `
+          <td class="p-4 font-mono text-xs">#${m.id}</td>
+          <td class="p-4 font-semibold text-slate-800">${m.nombre}</td>
+          <td class="p-4"><span class="px-2.5 py-1 bg-slate-100 rounded-lg text-xs font-medium text-slate-700">${esp.nombre}</span></td>
+          <td class="p-4">
+            <span class="px-2.5 py-1 rounded-lg text-xs font-semibold ${m.activo ? 'bg-teal-100 text-teal-700' : 'bg-slate-200 text-slate-600'}">
+              ${m.activo ? 'Activo' : 'Inactivo'}
+            </span>
+          </td>
+          <td class="p-4 text-center space-x-1">
+            <button onclick="editarMedico(${m.id})" title="Editar" class="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="toggleEstadoMedico(${m.id})" title="${m.activo ? 'Desactivar' : 'Activar'}" class="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+              <i class="fa-solid ${m.activo ? 'fa-user-slash text-rose-500' : 'fa-user-check text-teal-500'}"></i>
+            </button>
+            <button onclick="eliminarMedico(${m.id})" title="Eliminar" class="p-2 text-rose-600 hover:bg-rose-50 rounded-lg"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function abrirModalMedico() {
+      document.getElementById('form-medico').reset();
+      document.getElementById('medico-id').value = '';
+      document.getElementById('modal-medico-titulo').innerText = "Registrar Médico";
+
+      const selEsp = document.getElementById('medico-especialidad');
+      selEsp.innerHTML = '';
+      if (especialidades.length === 0) {
+        notificar("Primero debes registrar al menos una especialidad.", "error");
+        return;
+      }
+      especialidades.forEach(e => {
+        selEsp.innerHTML += `<option value="${e.id}">${e.nombre}</option>`;
+      });
+
+      document.getElementById('modal-medico').classList.remove('hidden');
+    }
+
+    function editarMedico(id) {
+      const m = medicos.find(x => x.id === id);
+      if (!m) return;
+      abrirModalMedico();
+      document.getElementById('modal-medico-titulo').innerText = "Actualizar Médico";
+      document.getElementById('medico-id').value = m.id;
+      document.getElementById('medico-nombre').value = m.nombre;
+      document.getElementById('medico-especialidad').value = m.especialidadId;
+    }
+
+    function guardarMedico(e) {
+      e.preventDefault();
+      const id = document.getElementById('medico-id').value;
+      const nombre = document.getElementById('medico-nombre').value.trim();
+      const especialidadId = parseInt(document.getElementById('medico-especialidad').value);
+
+      if (id) {
+        const m = medicos.find(x => x.id === parseInt(id));
+        m.nombre = nombre;
+        m.especialidadId = especialidadId;
+        notificar("Médico actualizado correctamente.", "success");
+      } else {
+        medicos.push({
+          id: medicos.length ? Math.max(...medicos.map(x => x.id)) + 1 : 1,
+          nombre,
+          especialidadId,
+          activo: true
+        });
+        notificar("Médico registrado exitosamente.", "success");
+      }
+      guardarDatos();
+      cerrarModales();
+      renderMedicos();
+    }
+
+    function toggleEstadoMedico(id) {
+      const m = medicos.find(x => x.id === id);
+      if (m) {
+        m.activo = !m.activo;
+        guardarDatos();
+        renderMedicos();
+        notificar(`Médico ${m.activo ? 'activado' : 'desactivado'}.`, "info");
+      }
+    }
+
+    function eliminarMedico(id) {
+      // VALIDACIÓN: No se puede eliminar si tiene cita activa
+      const tieneCitaActiva = citas.some(c => c.medicoId === id && c.estado === 'PROGRAMADA');
+      if (tieneCitaActiva) {
+        notificar("No se puede eliminar un médico con citas activas.", "error");
+        return;
+      }
+      if (!confirm("¿Está seguro de eliminar a este médico?")) return;
+      medicos = medicos.filter(m => m.id !== id);
+      guardarDatos();
+      renderMedicos();
+      notificar("Médico eliminado correctamente.", "success");
+    }
+
+    // ==========================================
+    // REGLAS Y RENDER DE ESPECIALIDADES
+    // ==========================================
+    function renderEspecialidades() {
+      const tbody = document.getElementById('tabla-especialidades-body');
+      tbody.innerHTML = '';
+      especialidades.forEach(e => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition-colors";
+        tr.innerHTML = `
+          <td class="p-4 font-mono text-xs">#${e.id}</td>
+          <td class="p-4 font-semibold text-slate-800">${e.nombre}</td>
+          <td class="p-4 text-center space-x-1">
+            <button onclick="editarEspecialidad(${e.id})" title="Editar" class="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="eliminarEspecialidad(${e.id})" title="Eliminar" class="p-2 text-rose-600 hover:bg-rose-50 rounded-lg"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function abrirModalEspecialidad() {
+      document.getElementById('form-especialidad').reset();
+      document.getElementById('especialidad-id').value = '';
+      document.getElementById('modal-especialidad-titulo').innerText = "Nueva Especialidad";
+      document.getElementById('modal-especialidad').classList.remove('hidden');
+    }
+
+    function editarEspecialidad(id) {
+      const esp = especialidades.find(x => x.id === id);
+      if (!esp) return;
+      abrirModalEspecialidad();
+      document.getElementById('modal-especialidad-titulo').innerText = "Actualizar Especialidad";
+      document.getElementById('especialidad-id').value = esp.id;
+      document.getElementById('especialidad-nombre').value = esp.nombre;
+    }
+
+    function guardarEspecialidad(e) {
+      e.preventDefault();
+      const id = document.getElementById('especialidad-id').value;
+      const nombre = document.getElementById('especialidad-nombre').value.trim();
+
+      if (id) {
+        const esp = especialidades.find(x => x.id === parseInt(id));
+        esp.nombre = nombre;
+        notificar("Especialidad actualizada.", "success");
+      } else {
+        especialidades.push({
+          id: especialidades.length ? Math.max(...especialidades.map(x => x.id)) + 1 : 1,
+          nombre
+        });
+        notificar("Especialidad creada con éxito.", "success");
+      }
+      guardarDatos();
+      cerrarModales();
+      renderEspecialidades();
+    }
+
+    function eliminarEspecialidad(id) {
+      // VALIDACIÓN: Verificar si algún médico la tiene asignada
+      const asignada = medicos.some(m => m.especialidadId === id);
+      if (asignada) {
+        notificar("No se puede eliminar: existen médicos con esta especialidad.", "error");
+        return;
+      }
+      if (!confirm("¿Desea eliminar esta especialidad?")) return;
+      especialidades = especialidades.filter(e => e.id !== id);
+      guardarDatos();
+      renderEspecialidades();
+      notificar("Especialidad eliminada correctamente.", "success");
+    }
+
+    // Arranque inicial
+    guardarDatos();
+    renderCitas();
+  </script>
+</body>
+</html>
