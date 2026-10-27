@@ -4,7 +4,7 @@ Sistema de administración médica desarrollado en Python con arquitectura orien
 
 ## Integrantes del Proyecto
 - Jesús Alejandro Aranda Reyes
-- Fátima Guadalupe Quirino Morales (fatimaQM13)
+- Fátima Quiñones Mireles (fatimaQM13)
 
 ---
 
